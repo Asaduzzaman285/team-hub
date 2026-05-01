@@ -1,0 +1,143 @@
+// apps/api/prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String?
+  avatar    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspaces      WorkspaceMember[]
+  announcements   Announcement[]
+  comments        Comment[]
+  assignedActions ActionItem[]      @relation("AssignedTo")
+  auditLogs       AuditLog[]
+}
+
+model Workspace {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  color       String?  @default("#3b82f6") // Default blue
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members       WorkspaceMember[]
+  goals         Goal[]
+  announcements Announcement[]
+  auditLogs     AuditLog[]
+}
+
+model WorkspaceMember {
+  id          String @id @default(uuid())
+  userId      String
+  workspaceId String
+  role        String @default("MEMBER") // ADMIN or MEMBER
+
+  user       User      @relation(fields: [userId], references: [id])
+  workspace  Workspace @relation(fields: [workspaceId], references: [id])
+
+  @@unique([userId, workspaceId])
+}
+
+model Goal {
+  id          String    @id @default(uuid())
+  title       String
+  description String?
+  status      String    @default("TODO") // TODO, IN_PROGRESS, DONE
+  dueDate     DateTime?
+  workspaceId String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  workspace   Workspace    @relation(fields: [workspaceId], references: [id])
+  milestones  Milestone[]
+  actionItems ActionItem[]
+}
+
+model Milestone {
+  id        String   @id @default(uuid())
+  title     String
+  isDone    Boolean  @default(false)
+  goalId    String
+  createdAt DateTime @default(now())
+
+  goal Goal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+}
+
+model ActionItem {
+  id          String    @id @default(uuid())
+  title       String
+  priority    String    @default("MEDIUM") // LOW, MEDIUM, HIGH
+  status      String    @default("TODO") // TODO, IN_PROGRESS, DONE
+  dueDate     DateTime?
+  goalId      String?
+  workspaceId String?   // Optional if linked to goal, but good for flat views
+  assigneeId  String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  goal     Goal?   @relation(fields: [goalId], references: [id])
+  assignee User?   @relation("AssignedTo", fields: [assigneeId], references: [id])
+}
+
+model Announcement {
+  id          String   @id @default(uuid())
+  title       String
+  content     String   // Rich text content as HTML/JSON string
+  isPinned    Boolean  @default(false)
+  workspaceId String
+  authorId    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
+  author    User      @relation(fields: [authorId], references: [id])
+  comments  Comment[]
+  reactions Reaction[]
+}
+
+model Comment {
+  id             String   @id @default(uuid())
+  content        String
+  announcementId String
+  authorId       String
+  createdAt      DateTime @default(now())
+
+  announcement Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  author       User         @relation(fields: [authorId], references: [id])
+}
+
+model Reaction {
+  id             String @id @default(uuid())
+  emoji          String
+  announcementId String
+  userId         String
+
+  announcement Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  action      String   // e.g., "CREATE_GOAL", "UPDATE_WORKSPACE"
+  entityType  String   // e.g., "GOAL", "WORKSPACE"
+  entityId    String
+  details     String?  // JSON string of changes
+  userId      String
+  workspaceId String
+  createdAt   DateTime @default(now())
+
+  user      User      @relation(fields: [userId], references: [id])
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
+}

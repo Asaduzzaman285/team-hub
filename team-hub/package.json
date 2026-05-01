@@ -1,0 +1,19 @@
+{
+  "name": "team-hub",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "turbo build",
+    "dev": "turbo dev",
+    "lint": "turbo lint",
+    "format": "prettier --write \"**/*.{js,jsx,md,json}\""
+  },
+  "devDependencies": {
+    "turbo": "latest",
+    "prettier": "^3.2.5"
+  }
+}
