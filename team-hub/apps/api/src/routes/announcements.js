@@ -86,7 +86,8 @@ router.post("/:id/comments", authMiddleware, async (req, res) => {
     if (!content) return res.status(400).json({ message: "Content is required" });
 
     const announcement = await req.prisma.announcement.findUnique({
-      where: { id: req.params.id }
+      where: { id: req.params.id },
+      include: { workspace: { include: { members: { include: { user: true } } } } }
     });
 
     if (!announcement) return res.status(404).json({ message: "Announcement not found" });
@@ -101,6 +102,27 @@ router.post("/:id/comments", authMiddleware, async (req, res) => {
         author: { select: { id: true, name: true, avatar: true } }
       }
     });
+
+    // Parse @mentions
+    const mentions = content.match(/@(\w+)/g);
+    if (mentions) {
+      const mentionedNames = mentions.map(m => m.slice(1).toLowerCase());
+      const mentionedMembers = announcement.workspace.members.filter(m => 
+        m.user.name && mentionedNames.includes(m.user.name.toLowerCase()) && m.userId !== req.user.id
+      );
+
+      for (const member of mentionedMembers) {
+        const notification = await req.prisma.notification.create({
+          data: {
+            type: "MENTION",
+            message: `${req.user.name} mentioned you in a comment`,
+            userId: member.userId,
+            link: `/workspace/${announcement.workspaceId}?tab=announcements&id=${announcement.id}`
+          }
+        });
+        req.io.to(`user:${member.userId}`).emit("notification", notification);
+      }
+    }
 
     req.io.to(announcement.workspaceId).emit("comment-added", {
       announcementId: req.params.id,

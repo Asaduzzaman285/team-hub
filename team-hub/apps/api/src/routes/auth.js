@@ -131,16 +131,66 @@ router.post("/refresh", async (req, res) => {
   }
 });
 
-// Logout
-router.post("/logout", (req, res) => {
-  res.clearCookie("accessToken");
-  res.clearCookie("refreshToken");
-  res.json({ message: "Logged out successfully" });
+const cloudinary = require("cloudinary").v2;
+
+// Cloudinary Config (Assume env vars are set)
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// Get Current User
-router.get("/me", authMiddleware, (req, res) => {
-  res.json({ user: req.user });
+// ... (existing code)
+
+// Update Profile
+router.patch("/profile", authMiddleware, async (req, res) => {
+  try {
+    const { name, avatar } = req.body;
+    let avatarUrl = avatar;
+
+    if (avatar && avatar.startsWith("data:image")) {
+      const uploadRes = await cloudinary.uploader.upload(avatar, {
+        folder: "avatars",
+      });
+      avatarUrl = uploadRes.secure_url;
+    }
+
+    const user = await req.prisma.user.update({
+      where: { id: req.user.id },
+      data: { name, avatar: avatarUrl },
+    });
+
+    res.json({
+      user: { id: user.id, email: user.email, name: user.name, avatar: user.avatar },
+      message: "Profile updated successfully",
+    });
+  } catch (error) {
+    console.error("Profile Update Error:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+// Get Notifications
+router.get("/notifications", authMiddleware, async (req, res) => {
+  try {
+    const notifications = await req.prisma.notification.findMany({
+      where: { userId: req.user.id },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+    });
+    res.json(notifications);
+  } catch (error) {
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+// Mark Notifications as Read
+router.post("/notifications/read", authMiddleware, async (req, res) => {
+  await req.prisma.notification.updateMany({
+    where: { userId: req.user.id },
+    data: { isRead: true },
+  });
+  res.json({ message: "Notifications marked as read" });
 });
 
 module.exports = router;

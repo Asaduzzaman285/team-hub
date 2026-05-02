@@ -271,39 +271,121 @@ router.get("/:id/audit-logs", authMiddleware, async (req, res) => {
 // Get Analytics for workspace
 router.get("/:id/analytics", authMiddleware, async (req, res) => {
   try {
-    const goalsCount = await req.prisma.goal.groupBy({
-      by: ["status"],
-      where: { workspaceId: req.params.id },
-      _count: true,
+    const workspaceId = req.params.id;
+
+    // Total goals count
+    const totalGoals = await req.prisma.goal.count({ where: { workspaceId } });
+
+    // Items completed this week
+    const startOfWeek = new Date();
+    startOfWeek.setHours(0, 0, 0, 0);
+    startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+
+    const completedThisWeek = await req.prisma.actionItem.count({
+      where: {
+        OR: [
+          { workspaceId },
+          { goal: { workspaceId } }
+        ],
+        status: "DONE",
+        updatedAt: { gte: startOfWeek }
+      }
     });
 
-    const actionItemsCount = await req.prisma.actionItem.groupBy({
+    // Overdue count
+    const overdueCount = await req.prisma.actionItem.count({
+      where: {
+        OR: [
+          { workspaceId },
+          { goal: { workspaceId } }
+        ],
+        status: { not: "DONE" },
+        dueDate: { lt: new Date() }
+      }
+    });
+
+    // Goal status distribution
+    const goalDistribution = await req.prisma.goal.groupBy({
+      by: ["status"],
+      where: { workspaceId },
+      _count: true
+    });
+
+    // Action item status distribution
+    const actionDistribution = await req.prisma.actionItem.groupBy({
       by: ["status"],
       where: {
         OR: [
-          { workspaceId: req.params.id },
-          { goal: { workspaceId: req.params.id } },
-        ],
+          { workspaceId },
+          { goal: { workspaceId } }
+        ]
       },
-      _count: true,
+      _count: true
     });
 
-    // Mock trend data for now
-    const trend = [
-      { name: "Mon", goals: 4, actions: 12 },
-      { name: "Tue", goals: 3, actions: 15 },
-      { name: "Wed", goals: 5, actions: 10 },
-      { name: "Thu", goals: 8, actions: 18 },
-      { name: "Fri", goals: 6, actions: 14 },
-    ];
+    // Trend data (last 7 days completions)
+    const trend = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const start = new Date(d.setHours(0, 0, 0, 0));
+      const end = new Date(d.setHours(23, 59, 59, 999));
+
+      const count = await req.prisma.actionItem.count({
+        where: {
+          OR: [{ workspaceId }, { goal: { workspaceId } }],
+          status: "DONE",
+          updatedAt: { gte: start, lte: end }
+        }
+      });
+      trend.push({
+        name: start.toLocaleDateString('en-US', { weekday: 'short' }),
+        completed: count
+      });
+    }
 
     res.json({
-      goals: goalsCount.reduce((acc, curr) => ({ ...acc, [curr.status]: curr._count }), {}),
-      actions: actionItemsCount.reduce((acc, curr) => ({ ...acc, [curr.status]: curr._count }), {}),
-      trend,
+      stats: {
+        totalGoals,
+        completedThisWeek,
+        overdueCount
+      },
+      distribution: {
+        goals: goalDistribution.reduce((acc, curr) => ({ ...acc, [curr.status]: curr._count }), {}),
+        actions: actionDistribution.reduce((acc, curr) => ({ ...acc, [curr.status]: curr._count }), {})
+      },
+      trend
     });
   } catch (error) {
     console.error("Get Analytics Error:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+// Export Workspace Data as CSV
+router.get("/:id/export", authMiddleware, async (req, res) => {
+  try {
+    const workspaceId = req.params.id;
+    
+    const goals = await req.prisma.goal.findMany({
+      where: { workspaceId },
+      include: { actionItems: true }
+    });
+
+    let csv = "Type,Title,Status,Due Date,Created At\n";
+    
+    goals.forEach(goal => {
+      csv += `Goal,"${goal.title}",${goal.status},${goal.dueDate || "N/A"},${goal.createdAt}\n`;
+      goal.actionItems.forEach(item => {
+        csv += `Action Item,"${item.title}",${item.status},${item.dueDate || "N/A"},${item.createdAt}\n`;
+      });
+    });
+
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader("Content-Disposition", `attachment; filename=workspace-${workspaceId}-export.csv`);
+    res.status(200).send(csv);
+  } catch (error) {
+    console.error("Export Error:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 });

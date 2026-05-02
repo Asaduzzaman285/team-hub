@@ -28,15 +28,52 @@ const io = new Server(server, {
   },
 });
 
+// Track online users: socketId -> { userId, workspaceId, name, avatar }
+const socketUsers = new Map();
+
+const getOnlineUsers = (workspaceId) => {
+  const users = Array.from(socketUsers.values())
+    .filter(u => u.workspaceId === workspaceId);
+  
+  // Return unique users by ID
+  const uniqueUsers = {};
+  users.forEach(u => {
+    uniqueUsers[u.userId] = { id: u.userId, name: u.name, avatar: u.avatar };
+  });
+  return Object.values(uniqueUsers);
+};
+
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
 
-  socket.on("join-workspace", (workspaceId) => {
+  socket.on("join-workspace", ({ workspaceId, user }) => {
     socket.join(workspaceId);
-    console.log(`User ${socket.id} joined workspace ${workspaceId}`);
+    
+    if (user) {
+      socket.join(`user:${user.id}`); // Join personal room for notifications
+      socketUsers.set(socket.id, {
+        userId: user.id,
+        workspaceId,
+        name: user.name,
+        avatar: user.avatar
+      });
+      
+      // Notify everyone in the workspace about the presence update
+      io.to(workspaceId).emit("presence-update", getOnlineUsers(workspaceId));
+    }
+    
+    console.log(`User ${user?.name || socket.id} joined workspace ${workspaceId}`);
   });
 
   socket.on("disconnect", () => {
+    const userData = socketUsers.get(socket.id);
+    if (userData) {
+      const { workspaceId } = userData;
+      socketUsers.delete(socket.id);
+      
+      // Broadcast update to the workspace they left
+      io.to(workspaceId).emit("presence-update", getOnlineUsers(workspaceId));
+    }
     console.log("User disconnected:", socket.id);
   });
 });
