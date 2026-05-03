@@ -2,34 +2,55 @@
 
 A premium full-stack monorepo application for team collaboration, featuring real-time updates, analytics, and clean architecture.
 
-## Tech Stack
-- **Frontend**: Next.js 14, Zustand, Tailwind CSS, Recharts, Axios, Socket.io-client.
-- **Backend**: Express.js, Prisma ORM, Socket.io, JWT + Cookies.
-- **Database**: PostgreSQL (Neon.tech).
+## 🚀 Live Demo
+- **Frontend:** [https://meticulous-nature-production-8177.up.railway.app](https://meticulous-nature-production-8177.up.railway.app)
+- **Backend API:** [https://team-hub-production-0506.up.railway.app/api](https://team-hub-production-0506.up.railway.app/api)
+- **Demo Account:** `admin@fredocloud.com` / `password123`
 
-## Key Features
+## ✨ Key Features
 - **Real-time Collaboration**: Instant updates for goals, kanban items, and announcements using Socket.io.
-- **Optimistic UI**: Immediate feedback on user actions for a snappy experience.
-- **Audit Logging**: Comprehensive activity tracking for every workspace action.
-- **Analytics Dashboard**: Visualized team performance using interactive charts.
-- **Premium Design**: Modern aesthetics with glassmorphism, animations, and dark mode support.
+- **Workspaces**: Multi-tenant workspace management with role-based member invites.
+- **Kanban & List Views**: Dual-view action item tracking with real-time status syncing.
+- **Rich Text Announcements**: Post formatted updates with @mentions, comments, and emoji reactions.
+- **Analytics Dashboard**: Velocity and distribution charts using Recharts + CSV data export.
 
-## Getting Started
+## 🛠️ Advanced Features Built
+1.  **Audit Log**: A complete, immutable history of all workspace changes (creation of goals, member invites, etc.) accessible via a dedicated Activity tab.
+2.  **Optimistic UI**: Implemented in the "Strategic Goals" section to provide instant feedback on creation and status toggles, ensuring a zero-latency feel.
+3.  **Real-time Presence**: Visual green-pulse indicators showing which team members are currently online in the workspace.
 
-### 1. Backend Setup
-1. `cd apps/api`
-2. `npm install`
-3. Configure `.env` (see `setup_guide.md`)
-4. `npx prisma db push`
-5. `npm run dev`
+## 📦 Setup Instructions
 
-### 2. Frontend Setup
-1. `cd apps/web`
-2. `npm install`
-3. `npm run dev`
+### 1. Prerequisites
+- Node.js 18+
+- PostgreSQL database
+- Cloudinary account (for avatars)
 
-## Project Structure
-- `apps/api`: Express server and Prisma schema.
-- `apps/web`: Next.js frontend application.
-- `apps/web/src/store`: Zustand state management.
-- `apps/web/src/hooks`: Custom hooks for Socket, Optimistic UI, etc.
+### 2. Installation
+```bash
+git clone <your-repo-url>
+cd team-hub
+npm install
+```
+
+### 3. Environment Variables
+Create a `.env` file in `apps/api`:
+- `DATABASE_URL`: Your PostgreSQL connection string.
+- `JWT_ACCESS_SECRET`: Random string for token signing.
+- `JWT_REFRESH_SECRET`: Random string for refresh tokens.
+- `CLOUDINARY_CLOUD_NAME`: Cloudinary name.
+- `CLOUDINARY_API_KEY`: Cloudinary API key.
+- `CLOUDINARY_API_SECRET`: Cloudinary secret.
+
+### 4. Running the App
+```bash
+# Push schema to DB
+cd apps/api && npx prisma db push
+
+# Start both frontend and backend
+cd ../.. && npm run dev
+```
+
+## 📝 Known Limitations
+- Mentions are currently text-based (parsing @name) rather than a dropdown-autocomplete.
+- Rich text support is optimized for desktop; mobile formatting may vary.
