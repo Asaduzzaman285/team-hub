@@ -4,10 +4,10 @@ import { useState, useEffect } from "react";
 import api from "@/lib/api";
 import { useSocket } from "@/hooks/useSocket";
 import useAuthStore from "@/store/useAuthStore";
-import dynamic from 'next/dynamic';
-
-const ReactQuill = dynamic(() => import('react-quill'), { ssr: false });
-import 'react-quill/dist/quill.snow.css';
+// Removed ReactQuill as it may cause issues with React 19
+// import dynamic from 'next/dynamic';
+// const ReactQuill = dynamic(() => import('react-quill'), { ssr: false });
+// import 'react-quill/dist/quill.snow.css';
 
 export default function AnnouncementsTab({ workspaceId }) {
   const [announcements, setAnnouncements] = useState([]);
@@ -17,8 +17,16 @@ export default function AnnouncementsTab({ workspaceId }) {
   const [newComment, setNewComment] = useState("");
   const { user } = useAuthStore();
   const { on, off } = useSocket(workspaceId);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const formatDate = (dateString) => {
+    if (!mounted) return "";
+    return new Date(dateString).toLocaleString();
+  };
     const fetchAnnouncements = async () => {
       try {
         const { data } = await api.get(`/announcements/workspace/${workspaceId}`);
@@ -112,12 +120,11 @@ export default function AnnouncementsTab({ workspaceId }) {
       <div className="bg-card p-6 rounded-2xl border shadow-sm">
         <h3 className="text-xl font-bold font-outfit mb-4">Share a rich update</h3>
         <div className="mb-4">
-          <ReactQuill 
-            theme="snow" 
-            value={newContent} 
-            onChange={setNewContent}
-            placeholder="What's happening in the team?"
-            className="bg-background rounded-xl overflow-hidden"
+          <textarea
+            className="w-full bg-background rounded-xl p-4 border min-h-[150px] outline-none focus:ring-2 focus:ring-primary transition-all"
+            value={newContent}
+            onChange={(e) => setNewContent(e.target.value)}
+            placeholder="What's happening in the team? (HTML supported)"
           />
         </div>
         <div className="flex justify-end mt-4">
@@ -150,7 +157,7 @@ export default function AnnouncementsTab({ workspaceId }) {
                     <div>
                       <p className="font-bold">{ann.author?.name}</p>
                       <p className="text-xs text-muted-foreground">
-                        {new Date(ann.createdAt).toLocaleString()}
+                        {formatDate(ann.createdAt)}
                       </p>
                     </div>
                   </div>

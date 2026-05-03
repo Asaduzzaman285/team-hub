@@ -14,6 +14,16 @@ export default function ActionItemsTab({ workspaceId }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState("kanban"); // 'kanban' or 'list'
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const formatDate = (dateString) => {
+    if (!mounted || !dateString) return "No due date";
+    return new Date(dateString).toLocaleDateString();
+  };
   const { on, off } = useSocket(workspaceId);
 
   useEffect(() => {
@@ -181,7 +191,7 @@ export default function ActionItemsTab({ workspaceId }) {
                     </span>
                   </td>
                   <td className="px-6 py-4 text-xs text-muted-foreground">
-                    {item.dueDate ? new Date(item.dueDate).toLocaleDateString() : "No due date"}
+                    {formatDate(item.dueDate)}
                   </td>
                   <td className="px-6 py-4">
                     <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-bold">

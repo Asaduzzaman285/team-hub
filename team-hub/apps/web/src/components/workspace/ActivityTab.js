@@ -6,6 +6,16 @@ import api from "@/lib/api";
 export default function ActivityTab({ workspaceId }) {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const formatDate = (dateString) => {
+    if (!mounted) return "";
+    return new Date(dateString).toLocaleString();
+  };
 
   useEffect(() => {
     const fetchLogs = async () => {
@@ -50,7 +60,7 @@ export default function ActivityTab({ workspaceId }) {
                     <span className="font-medium">{log.entityType}</span>
                   </p>
                   <span className="text-xs text-muted-foreground">
-                    {new Date(log.createdAt).toLocaleString()}
+                    {formatDate(log.createdAt)}
                   </span>
                 </div>
                 {log.details && (

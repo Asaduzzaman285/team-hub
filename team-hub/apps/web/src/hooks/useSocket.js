@@ -39,14 +39,19 @@ export const useSocket = (workspaceId) => {
   const on = (event, callback) => {
     if (socketRef.current) {
       socketRef.current.on(event, callback);
+    } else {
+      // If socket isn't ready, we could queue it, but it's better to 
+      // just expose the socket or ensure the effect has run.
+      // For now, we'll just check if it's ready.
+      console.warn(`Socket not ready for event: ${event}`);
     }
   };
 
-  const off = (event) => {
+  const off = (event, callback) => {
     if (socketRef.current) {
-      socketRef.current.off(event);
+      socketRef.current.off(event, callback);
     }
   };
 
-  return { emit, on, off };
+  return { socket: socketRef.current, emit, on, off };
 };
