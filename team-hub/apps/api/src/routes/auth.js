@@ -193,4 +193,16 @@ router.post("/notifications/read", authMiddleware, async (req, res) => {
   res.json({ message: "Notifications marked as read" });
 });
 
+// Logout
+router.post("/logout", (req, res) => {
+  res.clearCookie("accessToken");
+  res.clearCookie("refreshToken");
+  res.json({ message: "Logged out successfully" });
+});
+
+// Get Current User
+router.get("/me", authMiddleware, (req, res) => {
+  res.json({ user: req.user });
+});
+
 module.exports = router;
