@@ -188,6 +188,33 @@ router.post("/:id/members", authMiddleware, async (req, res) => {
       },
     });
 
+    // Fetch the workspace name for the notification message
+    const workspace = await req.prisma.workspace.findUnique({
+      where: { id: req.params.id },
+      select: { name: true },
+    });
+
+    // Create a notification for the invited user
+    const notification = await req.prisma.notification.create({
+      data: {
+        userId: userToAdd.id,
+        type: "INVITE",
+        message: `${req.user.name || req.user.email} invited you to join "${workspace?.name || "a workspace"}".`,
+        link: `/workspace/${req.params.id}`,
+      },
+    });
+
+    // Emit real-time event so invited user's UI updates instantly
+    // - "notification" updates their bell icon
+    // - "workspace-invite" triggers their workspaces list to refresh
+    if (req.io) {
+      req.io.to(`user:${userToAdd.id}`).emit("notification", notification);
+      req.io.to(`user:${userToAdd.id}`).emit("workspace-invite", {
+        workspaceId: req.params.id,
+        workspaceName: workspace?.name,
+      });
+    }
+
     await createAuditLog(
       req.prisma,
       req.user.id,

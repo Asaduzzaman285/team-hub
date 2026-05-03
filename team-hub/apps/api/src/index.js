@@ -58,22 +58,26 @@ io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
 
   socket.on("join-workspace", ({ workspaceId, user }) => {
-    socket.join(workspaceId);
-    
-    if (user) {
-      socket.join(`user:${user.id}`); // Join personal room for notifications
-      socketUsers.set(socket.id, {
-        userId: user.id,
-        workspaceId,
-        name: user.name,
-        avatar: user.avatar
-      });
-      
-      // Notify everyone in the workspace about the presence update
-      io.to(workspaceId).emit("presence-update", getOnlineUsers(workspaceId));
+    // Only join the workspace room if a workspaceId was provided
+    if (workspaceId) {
+      socket.join(workspaceId);
     }
-    
-    console.log(`User ${user?.name || socket.id} joined workspace ${workspaceId}`);
+
+    if (user) {
+      socket.join(`user:${user.id}`); // Always join personal room for notifications
+      if (workspaceId) {
+        socketUsers.set(socket.id, {
+          userId: user.id,
+          workspaceId,
+          name: user.name,
+          avatar: user.avatar
+        });
+        // Notify everyone in the workspace about the presence update
+        io.to(workspaceId).emit("presence-update", getOnlineUsers(workspaceId));
+      }
+    }
+
+    console.log(`User ${user?.name || socket.id} joined ${ workspaceId ? `workspace ${workspaceId}` : "(personal room only)"}`);
   });
 
   socket.on("disconnect", () => {

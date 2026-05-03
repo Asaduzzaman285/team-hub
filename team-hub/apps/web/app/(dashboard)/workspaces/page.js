@@ -1,37 +1,65 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import api from "@/lib/api";
+import { useSocket } from "@/hooks/useSocket";
 
 export default function WorkspacesListPage() {
   const [workspaces, setWorkspaces] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [inviteBanner, setInviteBanner] = useState(null);
+  const { on, off } = useSocket(); // no workspaceId — joins personal room only
+
+  const fetchWorkspaces = useCallback(async () => {
+    try {
+      const { data } = await api.get("/workspaces");
+      setWorkspaces(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    const fetchWorkspaces = async () => {
-      try {
-        const { data } = await api.get("/workspaces");
-        setWorkspaces(data);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchWorkspaces();
-  }, []);
+  }, [fetchWorkspaces]);
+
+  // Listen for real-time workspace-invite events from the backend
+  useEffect(() => {
+    on("workspace-invite", (payload) => {
+      setInviteBanner(`🎉 You were invited to "${payload.workspaceName}"!`);
+      fetchWorkspaces(); // Refresh the list instantly
+      setTimeout(() => setInviteBanner(null), 5000);
+    });
+    return () => off("workspace-invite");
+  }, [on, off, fetchWorkspaces]);
 
   if (loading) return <div className="p-8">Loading workspaces...</div>;
 
   return (
     <div className="space-y-8 animate-in">
+      {/* Invite Banner */}
+      {inviteBanner && (
+        <div className="flex items-center gap-3 p-4 bg-primary/10 border border-primary/30 text-primary rounded-2xl font-semibold animate-in shadow-lg shadow-primary/10">
+          <span className="text-xl">📬</span>
+          {inviteBanner}
+          <button
+            onClick={() => setInviteBanner(null)}
+            className="ml-auto text-muted-foreground hover:text-foreground transition-colors"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold font-outfit">Your Workspaces</h2>
           <p className="text-muted-foreground">Select a workspace to start collaborating.</p>
         </div>
-        <Link 
+        <Link
           href="/workspaces/new"
           className="bg-primary text-primary-foreground px-6 py-3 rounded-xl font-semibold shadow-lg shadow-primary/20 hover:scale-105 transition-all"
         >
@@ -47,7 +75,7 @@ export default function WorkspacesListPage() {
             className="group block p-6 bg-card rounded-2xl border hover:border-primary hover:shadow-xl transition-all"
           >
             <div className="flex items-center space-x-4 mb-4">
-              <div 
+              <div
                 className="w-12 h-12 rounded-xl flex items-center justify-center text-white text-xl font-bold shadow-inner"
                 style={{ backgroundColor: ws.color || "#6366f1" }}
               >

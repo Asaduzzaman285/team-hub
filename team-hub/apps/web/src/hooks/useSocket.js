@@ -17,9 +17,10 @@ export const useSocket = (workspaceId) => {
 
     socketRef.current.on("connect", () => {
       console.log("Connected to socket");
-      if (workspaceId) {
-        socketRef.current.emit("join-workspace", { workspaceId, user });
-      }
+      // Always emit join-workspace so the server registers the personal
+      // room (user:${id}) for notifications & invite events.
+      // workspaceId is optional — only passed when on a workspace page.
+      socketRef.current.emit("join-workspace", { workspaceId: workspaceId || null, user });
     });
 
     return () => {
