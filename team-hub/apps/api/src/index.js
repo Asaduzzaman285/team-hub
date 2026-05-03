@@ -13,7 +13,16 @@ const prisma = new PrismaClient();
 
 // Middleware
 app.use(cors({
-  origin: true, // Dynamically allow the requester's origin
+  // Allow the frontend's domain. In production set CLIENT_URL to your Vercel/frontend URL.
+  origin: (origin, callback) => {
+    const allowed = process.env.CLIENT_URL || "http://localhost:3000";
+    // Allow requests with no origin (e.g. server-to-server, Postman) and the allowed frontend
+    if (!origin || origin === allowed) {
+      callback(null, true);
+    } else {
+      callback(new Error(`CORS: origin ${origin} not allowed`));
+    }
+  },
   credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "Cookie"],

@@ -26,10 +26,12 @@ const generateTokens = (user) => {
 };
 
 // Cookie options
+// In production, frontend & backend are on different domains (e.g. Vercel + Railway).
+// sameSite must be "none" (with secure:true) to allow cross-domain cookies.
 const cookieOptions = {
   httpOnly: true,
   secure: process.env.NODE_ENV === "production",
-  sameSite: "strict",
+  sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
 };
 

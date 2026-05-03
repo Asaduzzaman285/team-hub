@@ -2,7 +2,9 @@ import axios from "axios";
 import useAuthStore from "../store/useAuthStore";
 
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api",
+  // Use /api to go through the Next.js proxy (same-origin, so cookies always work).
+  // Falls back to the direct API URL for non-proxied environments.
+  baseURL: typeof window !== "undefined" ? "/api" : (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"),
   withCredentials: true,
 });
 

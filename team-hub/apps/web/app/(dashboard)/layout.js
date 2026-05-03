@@ -8,7 +8,7 @@ import api from "@/lib/api";
 import { useSocket } from "@/hooks/useSocket";
 
 export default function DashboardLayout({ children }) {
-  const { user, setUser, logout } = useAuthStore();
+  const { user, setUser, logout, hasHydrated } = useAuthStore();
   const router = useRouter();
   const pathname = usePathname();
   const [loading, setLoading] = useState(true);
@@ -17,12 +17,16 @@ export default function DashboardLayout({ children }) {
   const { on, off } = useSocket();
 
   useEffect(() => {
+    // Wait until Zustand has loaded from localStorage before deciding
+    if (!hasHydrated) return;
+
     const checkAuth = async () => {
       try {
         const { data } = await api.get("/auth/me");
         setUser(data.user);
         setLoading(false);
       } catch (err) {
+        logout();
         router.push("/login");
       }
     };
@@ -32,7 +36,7 @@ export default function DashboardLayout({ children }) {
     } else {
       setLoading(false);
     }
-  }, [user, setUser, router]);
+  }, [user, setUser, logout, router, hasHydrated]);
 
   useEffect(() => {
     if (!user) return;
