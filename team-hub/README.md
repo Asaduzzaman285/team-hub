@@ -5,7 +5,7 @@ A premium full-stack monorepo application for team collaboration, featuring real
 ## 🚀 Live Demo
 - **Frontend:** [https://meticulous-nature-production-8177.up.railway.app](https://meticulous-nature-production-8177.up.railway.app)
 - **Backend API:** [https://team-hub-production-0506.up.railway.app/api](https://team-hub-production-0506.up.railway.app/api)
-- **Demo Account:** `admin@fredocloud.com` / `password123`
+
 
 ## ✨ Key Features
 - **Real-time Collaboration**: Instant updates for goals, kanban items, and announcements using Socket.io.
