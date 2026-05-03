@@ -27,6 +27,7 @@ export default function AnnouncementsTab({ workspaceId }) {
     if (!mounted) return "";
     return new Date(dateString).toLocaleString();
   };
+  useEffect(() => {
     const fetchAnnouncements = async () => {
       try {
         const { data } = await api.get(`/announcements/workspace/${workspaceId}`);
@@ -38,7 +39,6 @@ export default function AnnouncementsTab({ workspaceId }) {
       }
     };
     fetchAnnouncements();
-    // ... (rest of listeners)
 
     on("announcement-created", (newAnn) => {
       setAnnouncements((prev) => {
